@@ -18,6 +18,7 @@ ioapic.o: ioapic.c types.h defs.h traps.h memlayout.h
 kalloc.o: kalloc.c types.h defs.h param.h memlayout.h mmu.h spinlock.h
 kbd.o: kbd.c types.h x86.h defs.h kbd.h
 kill.o: kill.c types.h stat.h user.h
+ktrace.o: ktrace.c types.h defs.h param.h spinlock.h trace.h proc.h
 lapic.o: lapic.c param.h types.h defs.h date.h memlayout.h traps.h mmu.h \
  x86.h proc.h
 ln.o: ln.c types.h stat.h user.h
@@ -43,11 +44,12 @@ spinlock.o: spinlock.c types.h defs.h param.h x86.h memlayout.h mmu.h \
 stressfs.o: stressfs.c types.h stat.h user.h fs.h fcntl.h
 string.o: string.c types.h x86.h
 syscall.o: syscall.c types.h defs.h param.h memlayout.h mmu.h proc.h \
- x86.h syscall.h
+ x86.h syscall.h trace.h
 sysfile.o: sysfile.c types.h defs.h param.h stat.h mmu.h proc.h fs.h \
  spinlock.h sleeplock.h file.h fcntl.h
 sysproc.o: sysproc.c types.h x86.h defs.h param.h memlayout.h mmu.h \
- proc.h
+ proc.h trace.h
+trace.o: trace.c types.h stat.h user.h trace.h
 trap.o: trap.c types.h defs.h param.h memlayout.h mmu.h proc.h x86.h \
  traps.h spinlock.h
 uart.o: uart.c types.h defs.h param.h traps.h spinlock.h sleeplock.h fs.h \

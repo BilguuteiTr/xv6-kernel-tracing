@@ -581,8 +581,8 @@ SYSCALL(uptime)
     144d:	0f 05                	syscall
     144f:	c3                   	ret
 
-0000000000001450 <mmap>:
-SYSCALL(mmap)
+0000000000001450 <traceread>:
+SYSCALL(traceread)
     1450:	48 c7 c0 16 00 00 00 	mov    $0x16,%rax
     1457:	49 89 ca             	mov    %rcx,%r10
     145a:	0f 05                	syscall

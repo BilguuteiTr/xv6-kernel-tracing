@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "trace.h"
 
 int
 sys_fork(void)
@@ -86,4 +87,16 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+
+int
+sys_traceread(void){
+  struct trace_event *event;
+
+  // Get the first argument to grab the first event
+  if(argptr(0, (char**)&event, sizeof(*event)) < 0)
+    return -1;
+
+  return traceread(event);
 }

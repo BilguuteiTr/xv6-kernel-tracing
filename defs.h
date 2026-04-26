@@ -10,6 +10,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 struct trapframe;
+struct trace_event;
 
 //entry.S
 void            wrmsr(uint msr, uint64 val);
@@ -186,5 +187,11 @@ void            switchkvm(void);
 int             copyout(pml4e_t*, addr_t, void*, uint64);
 void            clearpteu(pml4e_t *pgdir, char *uva);
 
+// ktrace.c
+void            traceinit(void);
+void            traceevent(int, int, int, int, char*);
+int             traceread(struct trace_event*);
+
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+

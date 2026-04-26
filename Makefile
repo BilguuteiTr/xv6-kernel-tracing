@@ -1,7 +1,7 @@
 KERNOBJS = \
 	bio.o console.o exec.o file.o fs.o ide.o ioapic.o kalloc.o kbd.o lapic.o \
   log.o main.o mp.o pipe.o proc.o sleeplock.o spinlock.o string.o swtch.o \
-  syscall.o sysfile.o sysproc.o trapasm.o trap.o uart.o vectors.o vm.o \
+  syscall.o sysfile.o sysproc.o trapasm.o trap.o uart.o vectors.o vm.o ktrace.o \
 #
 
 UNAME_S := $(shell uname -s)
@@ -118,7 +118,7 @@ mkfs: mkfs.c fs.h
 
 UPROGS= \
 	_cat _echo _forktest _grep _init _kill _ln _ls _mkdir \
-	_rm _sh _stressfs _usertests _wc _zombie \
+	_rm _sh _stressfs _trace _usertests _wc _zombie \
 #
 
 fs.img: mkfs README $(UPROGS)
