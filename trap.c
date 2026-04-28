@@ -7,6 +7,8 @@
 #include "x86.h"
 #include "traps.h"
 #include "spinlock.h"
+#include "trace.h"
+
 
 // Interrupt descriptor table (shared by all CPUs).
 uint *idt;
@@ -92,6 +94,9 @@ trap(struct trapframe *tf)
             "rip 0x%p addr 0x%p--kill proc\n",
             proc->pid, proc->name, tf->trapno, tf->err, cpunum(), tf->rip,
             rcr2());
+            
+    // cprintf("debug: recording trap event\n");
+    traceevent(TRACE_TYPE_TRAP, proc->pid, tf->trapno, tf->err, proc->name);
     proc->killed = 1;
   }
 

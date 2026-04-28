@@ -27,6 +27,9 @@ void            bwrite(struct buf*);
 void            consoleinit(void);
 void            cprintf(char*, ...);
 void            consoleintr(int(*)(void));
+void            vidclear(void);
+void            vidputc(int, int, int, int);
+void            vidputs(int, int, char*, int);
 void            panic(char*) __attribute__((noreturn));
 
 // exec.c

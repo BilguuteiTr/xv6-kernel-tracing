@@ -26,6 +26,9 @@ char* sbrk(uint64);
 int sleep(int);
 int uptime(void);
 int traceread(void*);
+int vidclear(void);
+int vidputc(int, int, int, int);
+int vidputs(int, int, char*, int);
 
 // ulib.c
 int stat(char*, struct stat*);

@@ -35,6 +35,9 @@ traceevent(int type, int pid, int arg0, int arg1, char *name){
 
     //aquire the lock
     acquire(&traceBuffer.lock);
+    // debug
+    //cprintf("debug: traceevent type %d pid %d name %s\n", type, pid, name);
+
 
     event = &traceBuffer.events[traceBuffer.seq % TRACE_BUF_SIZE]; // Allows ring to wrap
 
@@ -65,6 +68,8 @@ int
 traceread(struct trace_event *dst){
     struct trace_event event;
 
+    acquire(&traceBuffer.lock);
+
     // No unread events available, return 0
     if(traceBuffer.readseq == traceBuffer.seq){
         release(&traceBuffer.lock); // Release the lock
@@ -73,6 +78,8 @@ traceread(struct trace_event *dst){
 
     event = traceBuffer.events[traceBuffer.readseq % TRACE_BUF_SIZE];
     traceBuffer.readseq++; // Increment
+
+    release(&traceBuffer.lock);
 
     if(copyout(proc->pgdir, (addr_t)dst, &event, sizeof(event)) < 0)
         return -1;

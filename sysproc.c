@@ -100,3 +100,43 @@ sys_traceread(void){
 
   return traceread(event);
 }
+
+
+int sys_vidclear(void){
+  vidclear();
+  return 0;
+}
+
+int
+sys_vidputc(void){
+  int row, col, ch, color;
+
+  if(argint(0, &row) < 0)
+    return -1;
+  if(argint(1, &col) < 0)
+    return -1;
+  if(argint(2, &ch) < 0)
+    return -1;
+  if(argint(3, &color) < 0)
+    return -1;
+
+  vidputc(row, col, ch, color);
+  return 0;
+}
+
+int sys_vidputs(void){
+  int row, col, color;
+  char *s;
+
+  if(argint(0, &row) < 0)
+    return -1;
+  if(argint(1, &col) < 0)
+    return -1;
+  if(argstr(2, &s) < 0)
+    return -1;
+  if(argint(3, &color) < 0)
+    return -1;
+
+  vidputs(row, col, s, color);
+  return 0;
+}

@@ -8,6 +8,8 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "spinlock.h"
+#include "proc.h"
+#include "trace.h"
 
 void freerange(void *vstart, void *vend);
 extern char end[]; // first address after kernel loaded from ELF file
@@ -68,6 +70,8 @@ kfree(char *v)
   kmem.freelist = r;
   if(kmem.use_lock)
     release(&kmem.lock);
+  if(kmem.use_lock)
+    traceevent(TRACE_TYPE_MEM, proc ? proc->pid : 0, V2P(v), 0, "kfree");
 }
 
 // Allocate one 4096-byte page of physical memory.
@@ -89,6 +93,10 @@ kalloc(void)
   
   if(kmem.use_lock)
     release(&kmem.lock);
+  //need to call this conditional again because it uses a lock
+  if(kmem.use_lock && r)
+    traceevent(TRACE_TYPE_MEM, proc ? proc->pid : 0, V2P((char*)r), 0, "kalloc");
+
   return (char*)r;
 }
 

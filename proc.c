@@ -6,6 +6,8 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "trace.h"
+
 
 struct {
   struct spinlock lock;
@@ -165,6 +167,9 @@ fork(void)
   __sync_synchronize();
   np->state = RUNNABLE;
 
+  // Trace the event
+  traceevent(TRACE_TYPE_PROC, pid, proc->pid, 0, "fork");
+
   return pid;
 }
 
@@ -180,6 +185,8 @@ exit(void)
 
   if(proc == initproc)
     panic("init exiting");
+
+  traceevent(TRACE_TYPE_PROC, proc->pid, 0, 0, "exit");
 
   // Close all open files.
   for(fd = 0; fd < NOFILE; fd++){

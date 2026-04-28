@@ -60,7 +60,7 @@ forktest(void)
   int n, pid;
 
   printf(1, "fork test\n");
-    1099:	48 b8 30 16 00 00 00 	movabs $0x1630,%rax
+    1099:	48 b8 58 16 00 00 00 	movabs $0x1658,%rax
     10a0:	00 00 00 
     10a3:	48 89 c6             	mov    %rax,%rsi
     10a6:	bf 01 00 00 00       	mov    $0x1,%edi
@@ -101,7 +101,7 @@ forktest(void)
     10fc:	81 7d fc e8 03 00 00 	cmpl   $0x3e8,-0x4(%rbp)
     1103:	75 77                	jne    117c <forktest+0xeb>
     printf(1, "fork claimed to work N times!\n", N);
-    1105:	48 b8 40 16 00 00 00 	movabs $0x1640,%rax
+    1105:	48 b8 68 16 00 00 00 	movabs $0x1668,%rax
     110c:	00 00 00 
     110f:	ba e8 03 00 00       	mov    $0x3e8,%edx
     1114:	48 89 c6             	mov    %rax,%rsi
@@ -124,7 +124,7 @@ forktest(void)
     1145:	85 c0                	test   %eax,%eax
     1147:	79 2f                	jns    1178 <forktest+0xe7>
       printf(1, "wait stopped early\n");
-    1149:	48 b8 5f 16 00 00 00 	movabs $0x165f,%rax
+    1149:	48 b8 87 16 00 00 00 	movabs $0x1687,%rax
     1150:	00 00 00 
     1153:	48 89 c6             	mov    %rax,%rsi
     1156:	bf 01 00 00 00       	mov    $0x1,%edi
@@ -150,7 +150,7 @@ forktest(void)
     118e:	83 f8 ff             	cmp    $0xffffffff,%eax
     1191:	74 2f                	je     11c2 <forktest+0x131>
     printf(1, "wait got too many\n");
-    1193:	48 b8 73 16 00 00 00 	movabs $0x1673,%rax
+    1193:	48 b8 9b 16 00 00 00 	movabs $0x169b,%rax
     119a:	00 00 00 
     119d:	48 89 c6             	mov    %rax,%rsi
     11a0:	bf 01 00 00 00       	mov    $0x1,%edi
@@ -165,7 +165,7 @@ forktest(void)
   }
 
   printf(1, "fork test OK\n");
-    11c2:	48 b8 86 16 00 00 00 	movabs $0x1686,%rax
+    11c2:	48 b8 ae 16 00 00 00 	movabs $0x16ae,%rax
     11c9:	00 00 00 
     11cc:	48 89 c6             	mov    %rax,%rsi
     11cf:	bf 01 00 00 00       	mov    $0x1,%edi
@@ -752,3 +752,24 @@ SYSCALL(traceread)
     162a:	49 89 ca             	mov    %rcx,%r10
     162d:	0f 05                	syscall
     162f:	c3                   	ret
+
+0000000000001630 <vidclear>:
+SYSCALL(vidclear)
+    1630:	48 c7 c0 17 00 00 00 	mov    $0x17,%rax
+    1637:	49 89 ca             	mov    %rcx,%r10
+    163a:	0f 05                	syscall
+    163c:	c3                   	ret
+
+000000000000163d <vidputc>:
+SYSCALL(vidputc)
+    163d:	48 c7 c0 18 00 00 00 	mov    $0x18,%rax
+    1644:	49 89 ca             	mov    %rcx,%r10
+    1647:	0f 05                	syscall
+    1649:	c3                   	ret
+
+000000000000164a <vidputs>:
+SYSCALL(vidputs)
+    164a:	48 c7 c0 19 00 00 00 	mov    $0x19,%rax
+    1651:	49 89 ca             	mov    %rcx,%r10
+    1654:	0f 05                	syscall
+    1656:	c3                   	ret

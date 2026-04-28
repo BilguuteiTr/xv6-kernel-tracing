@@ -124,6 +124,9 @@ extern addr_t sys_wait(void);
 extern addr_t sys_write(void);
 extern addr_t sys_uptime(void);
 extern addr_t sys_traceread(void);
+extern addr_t sys_vidclear(void);
+extern addr_t sys_vidputc(void);
+extern addr_t sys_vidputs(void);
 
 // PAGEBREAK!
 static addr_t (*syscalls[])(void) = {
@@ -149,6 +152,9 @@ static addr_t (*syscalls[])(void) = {
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
 [SYS_traceread]  sys_traceread,
+[SYS_vidclear]  sys_vidclear,
+[SYS_vidputc]  sys_vidputc,
+[SYS_vidputs] sys_vidputs,
 };
 
 static char *syscallnames[] = {
@@ -174,6 +180,9 @@ static char *syscallnames[] = {
   [SYS_mkdir]   "mkdir",
   [SYS_close]   "close",
   [SYS_traceread] "traceread",
+  [SYS_vidclear]  "vidclear",
+  [SYS_vidputc] "vidputc",
+  [SYS_vidputs] "vidputs",
 };
 
 void
@@ -185,7 +194,7 @@ syscall(struct trapframe *tf)
     tf->rax = syscalls[num]();
 
     //call trace event function 
-    if(num != SYS_traceread)
+    if(num != SYS_traceread && num != SYS_vidclear && num != SYS_vidputc && num != SYS_vidputs)
       traceevent(TRACE_TYPE_SYSCALL, proc->pid, num, tf->rax, syscallnames[num]);
 
     // DEBUG: Print the PID, system call number, and the return value from the syscall
