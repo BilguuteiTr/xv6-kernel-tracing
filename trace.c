@@ -52,16 +52,21 @@ type_color(int type){
 
 static int
 detail_color(struct trace_event *event){
-    if(event->type == TRACE_TYPE_TRAP)
+    if(event->type == TRACE_TYPE_TRAP) {
         return COLOR_RED;
-    if(event->type == TRACE_TYPE_MEM)
+    }
+    if(event->type == TRACE_TYPE_MEM) {
         return COLOR_YELLOW;
-    if(event->type == TRACE_TYPE_PROC)
+    }
+    if(event->type == TRACE_TYPE_PROC) {
         return COLOR_GREEN;
-    if(event->type == TRACE_TYPE_SYSCALL)
-        if(event->arg1 < 0)
+    }
+    if(event->type == TRACE_TYPE_SYSCALL) {
+        if(event->arg1 < 0) {
             return COLOR_RED;
+        }
         return COLOR_CYAN;
+    }
     return COLOR_NORMAL;
 }
 

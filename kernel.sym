@@ -543,8 +543,8 @@ ffff80000010be65 copyuvm
 ffff80000010bfee uva2ka
 ffff80000010c06c copyout
 ffff80000010c153 traceinit
-ffff80000010c1b3 traceevent
-ffff80000010c34b traceread
+ffff80000010c1c4 traceevent
+ffff80000010c42c traceread
 ffff80000010d000 digits
 ffff80000010d018 crt
 ffff80000010d020 shiftcode
