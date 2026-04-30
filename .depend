@@ -15,9 +15,11 @@ ide.o: ide.c types.h defs.h param.h memlayout.h mmu.h proc.h x86.h \
  traps.h spinlock.h sleeplock.h fs.h buf.h
 init.o: init.c types.h stat.h user.h fcntl.h
 ioapic.o: ioapic.c types.h defs.h traps.h memlayout.h
-kalloc.o: kalloc.c types.h defs.h param.h memlayout.h mmu.h spinlock.h
+kalloc.o: kalloc.c types.h defs.h param.h memlayout.h mmu.h spinlock.h \
+ proc.h trace.h
 kbd.o: kbd.c types.h x86.h defs.h kbd.h
 kill.o: kill.c types.h stat.h user.h
+ktrace.o: ktrace.c types.h defs.h param.h spinlock.h trace.h proc.h
 lapic.o: lapic.c param.h types.h defs.h date.h memlayout.h traps.h mmu.h \
  x86.h proc.h
 ln.o: ln.c types.h stat.h user.h
@@ -33,7 +35,7 @@ pipe.o: pipe.c types.h defs.h param.h mmu.h proc.h fs.h spinlock.h \
  sleeplock.h file.h
 printf.o: printf.c types.h stat.h user.h
 proc.o: proc.c types.h defs.h param.h memlayout.h mmu.h x86.h proc.h \
- spinlock.h
+ spinlock.h trace.h
 rm.o: rm.c types.h stat.h user.h
 sh.o: sh.c types.h user.h fcntl.h
 sleeplock.o: sleeplock.c types.h defs.h param.h x86.h memlayout.h mmu.h \
@@ -43,13 +45,16 @@ spinlock.o: spinlock.c types.h defs.h param.h x86.h memlayout.h mmu.h \
 stressfs.o: stressfs.c types.h stat.h user.h fs.h fcntl.h
 string.o: string.c types.h x86.h
 syscall.o: syscall.c types.h defs.h param.h memlayout.h mmu.h proc.h \
- x86.h syscall.h
+ x86.h syscall.h trace.h
 sysfile.o: sysfile.c types.h defs.h param.h stat.h mmu.h proc.h fs.h \
  spinlock.h sleeplock.h file.h fcntl.h
 sysproc.o: sysproc.c types.h x86.h defs.h param.h memlayout.h mmu.h \
- proc.h
+ proc.h trace.h
+trace.o: trace.c types.h stat.h user.h trace.h syscall.h
+trace_demo.o: trace_demo.c types.h stat.h user.h fcntl.h
 trap.o: trap.c types.h defs.h param.h memlayout.h mmu.h proc.h x86.h \
- traps.h spinlock.h
+ traps.h spinlock.h trace.h
+trap_test.o: trap_test.c types.h stat.h user.h
 uart.o: uart.c types.h defs.h param.h traps.h spinlock.h sleeplock.h fs.h \
  file.h mmu.h proc.h x86.h
 ulib.o: ulib.c types.h stat.h fcntl.h user.h x86.h
