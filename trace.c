@@ -13,9 +13,10 @@
 #define COLOR_YELLOW 0x0e
 #define COLOR_RED 0x0c
 
-#define GRAPH_WIDTH 32
+#define GRAPH_WIDTH 50
 
 int sys_count, proc_count, mem_count, trap_count = 0;
+int t_sys_count, t_proc_count, t_mem_count, t_trap_count = 0;
 
 static char*
 typename(int type){
@@ -28,10 +29,8 @@ typename(int type){
             return "trap";
         case TRACE_TYPE_MEM:
             return "mem";
-        case TYPE_NAME_FILTER:
-            return "filter";
         default:
-            return "unknown";
+            return "all";
     }
 }
 
@@ -76,14 +75,16 @@ latency_color(int latency){
 }
 
 static int
-want_type(struct trace_event *event, int filter){
-    if(filter == 0)
-        return 1;
-    return event->type == filter;
+want_event(struct trace_event *event, int type_filter, int pid_filter){
+    if(type_filter != 0 && event->type != type_filter)
+        return 0;
+    if(pid_filter != -1 && event->pid != pid_filter)
+        return 0;
+    return 1;
 }
 
 static void
-updatecounter(struct trace_event *event){
+update_window_counts(struct trace_event *event){
     if(event->type == TRACE_TYPE_SYSCALL)
         sys_count++;
     else if(event->type == TRACE_TYPE_PROC)
@@ -94,55 +95,16 @@ updatecounter(struct trace_event *event){
         trap_count++;
 }
 
-
-
 static void
-printevent(struct trace_event *event)
-{
-  if(event->type == TRACE_TYPE_SYSCALL){
-    printf(1, "%d %d %s pid %d name %s num %d ret %d\n",
-           event->seq,
-           event->ticks,
-           typename(event->type),
-           event->pid,
-           event->name,
-           event->arg0,
-           event->arg1);
-  } else if(event->type == TRACE_TYPE_PROC){
-    printf(1, "%d %d %s pid %d name %s parent %d\n",
-           event->seq,
-           event->ticks,
-           typename(event->type),
-           event->pid,
-           event->name,
-           event->arg0);
-  } else if(event->type == TRACE_TYPE_MEM){
-    printf(1, "%d %d %s pid %d name %s page %d\n",
-           event->seq,
-           event->ticks,
-           typename(event->type),
-           event->pid,
-           event->name,
-           event->arg0);
-  } else if(event->type == TRACE_TYPE_TRAP){
-    printf(1, "%d %d %s pid %d name %s trap %d err %d\n",
-           event->seq,
-           event->ticks,
-           typename(event->type),
-           event->pid,
-           event->name,
-           event->arg0,
-           event->arg1);
-  } else {
-    printf(1, "%d %d %s pid %d name %s arg0 %d arg1 %d\n",
-           event->seq,
-           event->ticks,
-           typename(event->type),
-           event->pid,
-           event->name,
-           event->arg0,
-           event->arg1);
-  }
+update_total_counts(struct trace_event *event){
+    if(event->type == TRACE_TYPE_SYSCALL)
+        t_sys_count++;
+    else if(event->type == TRACE_TYPE_PROC)
+        t_proc_count++;
+    else if(event->type == TRACE_TYPE_MEM)
+        t_mem_count++;
+    else if(event->type == TRACE_TYPE_TRAP)
+        t_trap_count++;
 }
 
 
@@ -177,6 +139,29 @@ itoa( int val, char *buf){
 }
 
 static void
+itox(uint val, char *buf){
+    char *hex = "0123456789abcdef";
+    int i = 0, j = 0;
+    char temp[16];
+
+    if(val == 0){
+        buf[0] = '0';
+        buf[1] = 0;
+        return;
+    }
+
+    while(val > 0 && i < sizeof(temp)-1){
+        temp[i++] = hex[val % 16];
+        val = val / 16;
+    }
+
+    while(i > 0){
+        buf[j++] = temp[--i];
+    }
+    buf[j] = 0;
+}
+
+static void
 drawnum(int row, int col, int val, int color){
     char buf[16];
     itoa(val, buf);
@@ -184,33 +169,42 @@ drawnum(int row, int col, int val, int color){
 }
 
 static void
+drawhex(int row, int col, uint val, int color){
+    char buf[16];
+    itox(val, buf);
+    vidputs(row, col, "0x", color);
+    vidputs(row, col+2, buf, color);
+}
+
+static void
 draweventrow(int row, struct trace_event *event){
-    vidputs(row, 0, "                                                                            ", COLOR_NORMAL);
+    vidputs(row, 0, "                                                                                ", COLOR_NORMAL);
     drawnum(row, 0, event->seq, COLOR_NORMAL);
     drawnum(row, 6, event->ticks, COLOR_NORMAL);
-    vidputs(row, 13, typename(event->type), type_color(event->type));
-    drawnum(row, 23, event->pid, type_color(event->type));
-    vidputs(row, 29, event->name, type_color(event->type));
+    drawnum(row, 14, event->pid, type_color(event->type));
+    vidputs(row, 20, event->comm, type_color(event->type));
+    vidputs(row, 29, typename(event->type), type_color(event->type));
+    vidputs(row, 39, event->event, type_color(event->type));
     
 
     if(event->type == TRACE_TYPE_SYSCALL){
-        vidputs(row, 42, "num", COLOR_NORMAL);
-        drawnum(row, 46, event->arg0, COLOR_CYAN);
-        vidputs(row, 52, "ret", COLOR_NORMAL);
-        drawnum(row, 56, event->arg1, detail_color(event));
-        vidputs(row, 62, "lat", COLOR_NORMAL);
-        drawnum(row, 66, event->arg2, latency_color(event->arg2));
+        vidputs(row, 49, "num=", COLOR_NORMAL);
+        drawnum(row, 53, event->arg0, COLOR_CYAN);
+        vidputs(row, 57, " ret=", COLOR_NORMAL);
+        drawnum(row, 62, event->arg1, detail_color(event));
+        vidputs(row, 68, " lat=", COLOR_NORMAL);
+        drawnum(row, 73, event->arg2, latency_color(event->arg2));
     } else if(event->type == TRACE_TYPE_PROC){
-        vidputs(row, 42, "parent", COLOR_NORMAL);
-        drawnum(row, 49, event->arg0, COLOR_GREEN);
+        vidputs(row, 49, "parent=", COLOR_NORMAL);
+        drawnum(row, 56, event->arg0, COLOR_GREEN);
     } else if(event->type == TRACE_TYPE_MEM){
-        vidputs(row, 42, "page", COLOR_NORMAL);
-        drawnum(row, 47, event->arg0, COLOR_YELLOW);
+        vidputs(row, 49, "page=", COLOR_NORMAL);
+        drawhex(row, 54, event->arg0, COLOR_YELLOW);
     } else if(event->type == TRACE_TYPE_TRAP){
-        vidputs(row, 42, "trap", COLOR_RED);
-        drawnum(row, 47, event->arg0, COLOR_RED);
-        vidputs(row, 53, "err", COLOR_RED);
-        drawnum(row, 57, event->arg1, COLOR_RED);
+        vidputs(row, 49, "cause=", COLOR_RED);
+        drawnum(row, 55, event->arg0, COLOR_RED);
+        vidputs(row, 60, " err=", COLOR_RED);
+        drawnum(row, 65, event->arg1, COLOR_RED);
     }
 }
 
@@ -220,7 +214,7 @@ draw_graph(int row, int col, int *activity, int activity_pos){
     char bar[2];
 
     bar[1] = 0;
-    vidputs(row, col, "ACTIVITY  .: none  -: low  =: med  #: high", COLOR_TITLE);
+    vidputs(row, col, "event rate last 50 ticks: . none | - low | = medium | # high", COLOR_TITLE);
 
     for(i = 0; i < GRAPH_WIDTH; i++){
         index = (activity_pos + 1 + i) % GRAPH_WIDTH;
@@ -232,7 +226,7 @@ draw_graph(int row, int col, int *activity, int activity_pos){
         } else if (count < 3){
             bar[0] = '-';
             color = COLOR_GREEN;
-        } else if(count < 0){
+        } else if(count < 7){
             bar[0] = '=';
             color = COLOR_YELLOW;
         } else {
@@ -246,34 +240,46 @@ draw_graph(int row, int col, int *activity, int activity_pos){
 
 static void
 drawBoard(struct trace_event *recent, int recent_count, int recent_start,
-          int sys_count, int proc_count, int mem_count, int trap_count,
-          int *activity, int activity_pos, int filter)
+          int filter_type, int filter_pid, int overwritten)
 {
     int i, index;
 
     vidclear();
 
-    vidputs(0, 0, "XV6 LIVE KERNEL TRACE DASHBOARD\n", COLOR_TITLE);
-    vidputs(0, 45, "FILTER", COLOR_TITLE);
-    vidputs(0, 53, typename(filter), type_color(filter));
-    vidputs(1, 0, "------------------------------------------------------------", COLOR_NORMAL);
+    vidputs(0, 0, "xv6 live kernel trace dashboard", COLOR_TITLE);
     
-    vidputs(3, 0, "SYSCALLS", COLOR_CYAN);
-    drawnum(3, 10, sys_count, COLOR_CYAN);
+    vidputs(1, 0, "filter: type=", COLOR_NORMAL);
+    vidputs(1, 13, typename(filter_type), type_color(filter_type));
+    vidputs(1, 21, " pid=", COLOR_NORMAL);
+    if(filter_pid == -1)
+        vidputs(1, 26, "all", COLOR_NORMAL);
+    else
+        drawnum(1, 26, filter_pid, COLOR_NORMAL);
 
-    vidputs(3, 22, "PROC", COLOR_GREEN);
-    drawnum(3, 28, proc_count, COLOR_GREEN);
+    vidputs(1, 32, "| window: syscall=", COLOR_NORMAL);
+    drawnum(1, 50, sys_count, COLOR_CYAN);
+    vidputs(1, 54, " proc=", COLOR_NORMAL);
+    drawnum(1, 60, proc_count, COLOR_GREEN);
+    vidputs(1, 64, " mem=", COLOR_NORMAL);
+    drawnum(1, 69, mem_count, COLOR_YELLOW);
+    vidputs(1, 73, " trap=", COLOR_NORMAL);
+    drawnum(1, 79, trap_count, COLOR_RED);
 
-    vidputs(3, 40, "MEM", COLOR_YELLOW);
-    drawnum(3, 45, mem_count, COLOR_YELLOW);
+    vidputs(2, 0, "total: syscall=", COLOR_NORMAL);
+    drawnum(2, 15, t_sys_count, COLOR_CYAN);
+    vidputs(2, 20, " proc=", COLOR_NORMAL);
+    drawnum(2, 26, t_proc_count, COLOR_GREEN);
+    vidputs(2, 30, " mem=", COLOR_NORMAL);
+    drawnum(2, 35, t_mem_count, COLOR_YELLOW);
+    vidputs(2, 40, " trap=", COLOR_NORMAL);
+    drawnum(2, 46, t_trap_count, COLOR_RED);
+    vidputs(2, 52, "| overwritten=", COLOR_NORMAL);
+    drawnum(2, 66, overwritten, overwritten > 0 ? COLOR_RED : COLOR_NORMAL);
 
-    vidputs(3, 56, "TRAP", COLOR_RED);
-    drawnum(3, 62, trap_count, COLOR_RED);
+    // draw_graph(4, 0, activity, activity_pos); // activity graph needs activity array
 
-    draw_graph(4, 0, activity, activity_pos);
-
-    vidputs(6, 0, "SEQ   TICKS  TYPE      PID   EVENT        DETAILS", COLOR_TITLE);
-    vidputs(7, 0, "------------------------------------------------------------", COLOR_NORMAL);
+    vidputs(6, 0, "SEQ   TICKS   PID   PROC     SUBSYS    EVENT     DETAILS", COLOR_TITLE);
+    vidputs(7, 0, "---------------------------------------------------------------------------", COLOR_NORMAL);
    
     for(i = 0; i < recent_count && i < MAX_EVENTS; i++){
         index = (recent_start + i) % MAX_EVENTS;
@@ -286,43 +292,46 @@ drawBoard(struct trace_event *recent, int recent_count, int recent_start,
 
 int
 main(int argc, char **argv){
-    // Create space for one event
     struct trace_event event;
     struct trace_event recent[MAX_EVENTS];
     int recent_count = 0;
     int recent_start = 0;
-    int limit = 20;
+    int limit = 1000;
     int seen = 0;
     int activity[GRAPH_WIDTH];
     int activity_pos = 0;
     int last_tick = -1;
     int i;
-    int filter = 0;
+    int filter_type = 0;
+    int filter_pid = -1;
+    int overwritten = 0;
 
     vidclear();
     
-    sleep(100);
+    sleep(10);
 
     if(argc > 1)
         limit = atoi(argv[1]);
     if(argc > 2){
         if(strcmp(argv[2], "syscall") == 0)
-            filter = TRACE_TYPE_SYSCALL;
+            filter_type = TRACE_TYPE_SYSCALL;
         else if(strcmp(argv[2], "proc") == 0)
-            filter = TRACE_TYPE_PROC;
+            filter_type = TRACE_TYPE_PROC;
         else if(strcmp(argv[2], "mem") == 0)
-            filter = TRACE_TYPE_MEM;
+            filter_type = TRACE_TYPE_MEM;
         else if(strcmp(argv[2], "trap") == 0)
-            filter = TRACE_TYPE_TRAP;
-        else
-            filter = 0;
+            filter_type = TRACE_TYPE_TRAP;
+        else if(atoi(argv[2]) > 0 || strcmp(argv[2], "0") == 0)
+            filter_pid = atoi(argv[2]);
     }
+    if(argc > 3){
+        filter_pid = atoi(argv[3]);
+    }
+
     // initialize activity graph
     for(i = 0; i < GRAPH_WIDTH; i++){
         activity[i] = 0;
     }
-
-    //printf(1, "SEQ TICKS TYPE DETAILS\n");
 
     while(seen < limit){
         int n = traceread(&event);
@@ -336,18 +345,26 @@ main(int argc, char **argv){
             sleep(10);
             continue;
         }
-        if(!want_type(&event, filter))
+
+        update_total_counts(&event);
+        overwritten = event.overwritten;
+
+        if(!want_event(&event, filter_type, filter_pid))
             continue;
         
-        updatecounter(&event);
+        update_window_counts(&event);
 
         // Update the activity graph
         if(last_tick == -1)
             last_tick = event.ticks;
 
         if(event.ticks != last_tick){
-            activity_pos = (activity_pos + 1) % GRAPH_WIDTH;
-            activity[activity_pos] = 0;
+            int diff = event.ticks - last_tick;
+            if(diff > 50) diff = 50; // Cap it
+            for(i = 0; i < diff; i++) {
+                activity_pos = (activity_pos + 1) % GRAPH_WIDTH;
+                activity[activity_pos] = 0;
+            }
             last_tick = event.ticks;
         }
         activity[activity_pos]++;
@@ -360,9 +377,9 @@ main(int argc, char **argv){
             recent[recent_start] = event;
             recent_start = (recent_start + 1) % MAX_EVENTS;
         }
-        // printevent(&event);
-        drawBoard(recent, recent_count, recent_start, sys_count, 
-                  proc_count, mem_count, trap_count, activity, activity_pos, filter);
+        
+        drawBoard(recent, recent_count, recent_start, filter_type, filter_pid, overwritten);
+        draw_graph(4, 0, activity, activity_pos);
 
         seen++;
     }

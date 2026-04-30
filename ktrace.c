@@ -12,6 +12,7 @@ struct {
     int enabled;           // turn on or off 
     uint seq;              // where the event is written
     uint readseq;          // the next event the user program should read
+    uint overwritten;      // count of overwritten events
     struct trace_event events[TRACE_BUF_SIZE];  // Ring buffer
 } traceBuffer;
 
@@ -22,6 +23,7 @@ traceinit(void){
     traceBuffer.enabled = 1;
     traceBuffer.seq = 0;
     traceBuffer.readseq = 0;
+    traceBuffer.overwritten = 0;
 }
 
 // trace the current event
@@ -49,17 +51,26 @@ traceevent(int type, int pid, int arg0, int arg1, int arg2, char *name){
     event->arg0 = arg0;
     event->arg1 = arg1;
     event->arg2 = arg2;
+    event->overwritten = traceBuffer.overwritten;
 
-    memset(event->name, 0, sizeof(event->name));
+    memset(event->comm, 0, sizeof(event->comm));
+    if(proc && proc->pid > 0) {
+        safestrcpy(event->comm, proc->name, sizeof(event->comm));
+    } else {
+        safestrcpy(event->comm, "kernel", sizeof(event->comm));
+    }
 
+    memset(event->event, 0, sizeof(event->event));
     if(name)
-        safestrcpy(event->name, name, sizeof(event->name));
+        safestrcpy(event->event, name, sizeof(event->event));
 
     traceBuffer.seq++; // Update sequence number
 
     // If the writer gets more than 128 events ahead, old events are gone, move readseq  foreward to the oldest event still available
-    if(traceBuffer.seq - traceBuffer.readseq > TRACE_BUF_SIZE)
+    if(traceBuffer.seq - traceBuffer.readseq > TRACE_BUF_SIZE) {
         traceBuffer.readseq = traceBuffer.seq - TRACE_BUF_SIZE;
+        traceBuffer.overwritten++;
+    }
 
     // Release the lock
     release(&traceBuffer.lock);

@@ -19,5 +19,7 @@ struct trace_event {
     int arg0;       // Argument 0: syscall number
     int arg1;       // Argument 1: syscall return value
     int arg2;       // Argument 2: syscall latency
-    char name[TRACE_NAME_LEN];  // Name of syscall
+    char comm[TRACE_NAME_LEN];  // Process name
+    char event[TRACE_NAME_LEN]; // Event name
+    uint overwritten;           // Number of overwritten events
 };
