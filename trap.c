@@ -96,7 +96,7 @@ trap(struct trapframe *tf)
             rcr2());
             
     // cprintf("debug: recording trap event\n");
-    traceevent(TRACE_TYPE_TRAP, proc->pid, tf->trapno, tf->err, proc->name);
+    traceevent(TRACE_TYPE_TRAP, proc->pid, tf->trapno, tf->err, 0, proc->name);
     proc->killed = 1;
   }
 

@@ -192,7 +192,7 @@ void            clearpteu(pml4e_t *pgdir, char *uva);
 
 // ktrace.c
 void            traceinit(void);
-void            traceevent(int, int, int, int, char*);
+void            traceevent(int, int, int, int, int, char*);
 int             traceread(struct trace_event*);
 
 // number of elements in fixed-size array

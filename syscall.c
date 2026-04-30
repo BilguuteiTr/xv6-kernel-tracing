@@ -190,12 +190,20 @@ syscall(struct trapframe *tf)
 {
   proc->tf = tf;
   uint64 num = proc->tf->rax;
+  uint start_ticks, end_ticks, latency;
+
+  
+
+
   if (num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    start_ticks = ticks;
     tf->rax = syscalls[num]();
+    end_ticks = ticks;
+    latency = end_ticks - start_ticks;
 
     //call trace event function 
     if(num != SYS_traceread && num != SYS_vidclear && num != SYS_vidputc && num != SYS_vidputs)
-      traceevent(TRACE_TYPE_SYSCALL, proc->pid, num, tf->rax, syscallnames[num]);
+      traceevent(TRACE_TYPE_SYSCALL, proc->pid, num, tf->rax, latency, syscallnames[num]);
 
     // DEBUG: Print the PID, system call number, and the return value from the syscall
     // cprintf("trace: pid %d syscall %s(%d) -> %d\n", proc->pid, syscallnames[num], num, tf->rax);

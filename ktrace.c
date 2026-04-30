@@ -26,7 +26,7 @@ traceinit(void){
 
 // trace the current event
 void 
-traceevent(int type, int pid, int arg0, int arg1, char *name){
+traceevent(int type, int pid, int arg0, int arg1, int arg2, char *name){
     struct trace_event *event;
 
     // if the trace buffer is not enabled, then return nothing
@@ -48,6 +48,7 @@ traceevent(int type, int pid, int arg0, int arg1, char *name){
     event->pid = pid;
     event->arg0 = arg0;
     event->arg1 = arg1;
+    event->arg2 = arg2;
 
     memset(event->name, 0, sizeof(event->name));
 

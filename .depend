@@ -51,6 +51,7 @@ sysfile.o: sysfile.c types.h defs.h param.h stat.h mmu.h proc.h fs.h \
 sysproc.o: sysproc.c types.h x86.h defs.h param.h memlayout.h mmu.h \
  proc.h trace.h
 trace.o: trace.c types.h stat.h user.h trace.h syscall.h
+trace_demo.o: trace_demo.c types.h stat.h user.h fcntl.h
 trap.o: trap.c types.h defs.h param.h memlayout.h mmu.h proc.h x86.h \
  traps.h spinlock.h trace.h
 trap_test.o: trap_test.c types.h stat.h user.h
