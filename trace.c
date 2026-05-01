@@ -173,31 +173,29 @@ static void
 draweventrow(int row, struct trace_event *event){
     vidputs(row, 0, "                                                                                ", COLOR_NORMAL);
     drawnum(row, 0, event->seq, COLOR_NORMAL);
-    drawnum(row, 6, event->ticks, COLOR_NORMAL);
-    drawnum(row, 14, event->pid, type_color(event->type));
-    vidputs(row, 20, event->comm, type_color(event->type));
-    vidputs(row, 29, typename(event->type), type_color(event->type));
-    vidputs(row, 39, event->event, type_color(event->type));
+    drawnum(row, 5, event->ticks, COLOR_NORMAL);
+    drawnum(row, 12, event->pid, type_color(event->type));
+    vidputs(row, 17, event->comm, type_color(event->type));
+    vidputs(row, 34, typename(event->type), type_color(event->type));
+    vidputs(row, 43, event->event, type_color(event->type));
     
 
     if(event->type == TRACE_TYPE_SYSCALL){
-        vidputs(row, 49, "num=", COLOR_NORMAL);
-        drawnum(row, 53, event->arg0, COLOR_CYAN);
-        vidputs(row, 57, " ret=", COLOR_NORMAL);
-        drawnum(row, 62, event->arg1, detail_color(event));
-        vidputs(row, 68, " lat=", COLOR_NORMAL);
-        drawnum(row, 73, event->arg2, latency_color(event->arg2));
+        vidputs(row, 54, "num = ", COLOR_NORMAL);
+        drawnum(row, 60, event->arg0, COLOR_CYAN);
+        vidputs(row, 64, "ret = ", COLOR_NORMAL);
+        drawnum(row, 70, event->arg1, detail_color(event));
     } else if(event->type == TRACE_TYPE_PROC){
-        vidputs(row, 49, "parent=", COLOR_NORMAL);
-        drawnum(row, 56, event->arg0, COLOR_GREEN);
+        vidputs(row, 54, "child = ", COLOR_NORMAL);
+        drawnum(row, 62, event->arg0, COLOR_GREEN);
     } else if(event->type == TRACE_TYPE_MEM){
-        vidputs(row, 49, "page=", COLOR_NORMAL);
-        drawhex(row, 54, event->arg0, COLOR_YELLOW);
+        vidputs(row, 54, "page = ", COLOR_NORMAL);
+        drawhex(row, 61, event->arg0, COLOR_YELLOW);
     } else if(event->type == TRACE_TYPE_TRAP){
-        vidputs(row, 49, "cause=", COLOR_RED);
-        drawnum(row, 55, event->arg0, COLOR_RED);
-        vidputs(row, 60, " err=", COLOR_RED);
-        drawnum(row, 65, event->arg1, COLOR_RED);
+        vidputs(row, 54, "cause = ", COLOR_RED);
+        drawnum(row, 62, event->arg0, COLOR_RED);
+        vidputs(row, 66, "err = ", COLOR_RED);
+        drawnum(row, 72, event->arg1, COLOR_RED);
     }
 }
 
@@ -239,49 +237,46 @@ drawBoard(struct trace_event *recent, int recent_count, int recent_start,
 
     vidclear();
 
-    vidputs(0, 0, "xv6 live kernel trace dashboard", COLOR_TITLE);
+    vidputs(0, 0, "XV6 LIVE KERNEL TRACE DASHBOARD", COLOR_TITLE);
     
-    vidputs(0, 37, "FILTER:", COLOR_NORMAL);
-    vidputs(0, 45, typename(filter_type), type_color(filter_type));
-    vidputs(0, 54, "pid=", COLOR_NORMAL);
+    vidputs(0, 36, "FILTER:", COLOR_NORMAL);
+    vidputs(0, 44, typename(filter_type), type_color(filter_type));
+    vidputs(0, 52, "pid = ", COLOR_NORMAL);
     if(filter_pid == -1) vidputs(0, 58, "all", COLOR_NORMAL);
     else drawnum(0, 58, filter_pid, COLOR_NORMAL);
 
-    vidputs(1, 0, "STATUS:", COLOR_NORMAL);
-    if(limit == 0){
-        vidputs(1, 8, "ONESHOT", COLOR_YELLOW);
-        vidputs(1, 17, "captured=", COLOR_NORMAL);
-        drawnum(1, 26, seen, COLOR_CYAN);
-        vidputs(1, 30, "/BUFFER", COLOR_NORMAL);
-    } else {
-        vidputs(1, 8, "LIVE", COLOR_GREEN);
-        vidputs(1, 17, "captured=", COLOR_NORMAL);
-        drawnum(1, 26, seen, COLOR_CYAN);
-        vidputs(1, 30, "/", COLOR_NORMAL);
-        drawnum(1, 31, limit, COLOR_CYAN);
-    }
+    vidputs(0, 64, "STATUS:", COLOR_NORMAL);
+    if(limit == 0) vidputs(0, 72, "ONESHOT", COLOR_YELLOW);
+    else vidputs(0, 72, "LIVE", COLOR_GREEN);
 
-    vidputs(1, 47, "| showing: syscall=", COLOR_NORMAL);
-    drawnum(1, 66, sys_count, COLOR_CYAN);
-    vidputs(1, 71, "proc=", COLOR_NORMAL);
-    drawnum(1, 76, proc_count, COLOR_GREEN);
-    vidputs(2, 47, "|          mem=", COLOR_NORMAL);
-    drawnum(2, 62, mem_count, COLOR_YELLOW);
-    vidputs(2, 67, "trap=", COLOR_NORMAL);
-    drawnum(2, 72, trap_count, COLOR_RED);
+    vidputs(1, 0, "captured = ", COLOR_NORMAL);
+    drawnum(1, 11, seen, COLOR_CYAN);
+    vidputs(1, 15, "/ ", COLOR_NORMAL);
+    if(limit == 0) drawnum(1, 17, 128, COLOR_CYAN); // Kernel buffer is 128
+    else drawnum(1, 17, limit, COLOR_CYAN);
 
-    vidputs(2, 0, "total: syscall=", COLOR_NORMAL);
-    drawnum(2, 15, t_sys_count, COLOR_CYAN);
-    vidputs(2, 20, "proc=", COLOR_NORMAL);
-    drawnum(2, 25, t_proc_count, COLOR_GREEN);
-    vidputs(2, 30, "mem=", COLOR_NORMAL);
-    drawnum(2, 34, t_mem_count, COLOR_YELLOW);
-    vidputs(2, 39, "trap=", COLOR_NORMAL);
-    drawnum(2, 44, t_trap_count, COLOR_RED);
-    vidputs(2, 49, "| overwritten=", COLOR_NORMAL);
-    drawnum(2, 63, overwritten, overwritten > 0 ? COLOR_RED : COLOR_NORMAL);
+    vidputs(1, 26, "showing: syscall = ", COLOR_NORMAL);
+    drawnum(1, 45, sys_count, COLOR_CYAN);
+    vidputs(1, 48, " proc = ", COLOR_NORMAL);
+    drawnum(1, 56, proc_count, COLOR_GREEN);
+    vidputs(1, 59, " mem = ", COLOR_NORMAL);
+    drawnum(1, 66, mem_count, COLOR_YELLOW);
+    vidputs(1, 69, " trap = ", COLOR_NORMAL);
+    drawnum(1, 77, trap_count, COLOR_RED);
 
-    vidputs(6, 0, "SEQ   TICKS   PID   PROC     SUBSYS    EVENT     DETAILS", COLOR_TITLE);
+    vidputs(2, 0, "overwritten = ", COLOR_NORMAL);
+    drawnum(2, 14, overwritten, overwritten > 0 ? COLOR_RED : COLOR_NORMAL);
+
+    vidputs(2, 26, "total:   syscall = ", COLOR_NORMAL);
+    drawnum(2, 45, t_sys_count, COLOR_CYAN);
+    vidputs(2, 48, " proc = ", COLOR_NORMAL);
+    drawnum(2, 56, t_proc_count, COLOR_GREEN);
+    vidputs(2, 59, " mem = ", COLOR_NORMAL);
+    drawnum(2, 66, t_mem_count, COLOR_YELLOW);
+    vidputs(2, 69, " trap = ", COLOR_NORMAL);
+    drawnum(2, 77, t_trap_count, COLOR_RED);
+
+    vidputs(6, 0, "SEQ  TICKS  PID  PROC             SUBSYS   EVENT      DETAILS", COLOR_TITLE);
     vidputs(7, 0, "---------------------------------------------------------------------------", COLOR_NORMAL);
    
     // Limit loop by recent_count, display_rows, AND MAX_TRACE_ROWS
@@ -309,30 +304,44 @@ main(int argc, char **argv){
     int overwritten = 0;
     int arg_idx = 1;
     int self_pid = getpid();
+    int limit_set = 0;
 
     while(arg_idx < argc) {
         if(strcmp(argv[arg_idx], "-n") == 0 && arg_idx + 1 < argc) {
             display_rows = atoi(argv[arg_idx + 1]);
             if(display_rows > MAX_TRACE_ROWS) display_rows = MAX_TRACE_ROWS;
             arg_idx += 2;
-        } else if(atoi(argv[arg_idx]) > 0 || (strcmp(argv[arg_idx], "0") == 0 && seen == 0)) {
-            limit = atoi(argv[arg_idx]);
+        } else if(strcmp(argv[arg_idx], "syscall") == 0) {
+            filter_type = TRACE_TYPE_SYSCALL;
             arg_idx++;
-        } else if(filter_type == 0 && filter_pid == -1) {
-            if(strcmp(argv[arg_idx], "syscall") == 0) filter_type = TRACE_TYPE_SYSCALL;
-            else if(strcmp(argv[arg_idx], "proc") == 0) filter_type = TRACE_TYPE_PROC;
-            else if(strcmp(argv[arg_idx], "mem") == 0) filter_type = TRACE_TYPE_MEM;
-            else if(strcmp(argv[arg_idx], "trap") == 0) filter_type = TRACE_TYPE_TRAP;
-            else if(atoi(argv[arg_idx]) > 0 || strcmp(argv[arg_idx], "0") == 0) filter_pid = atoi(argv[arg_idx]);
+        } else if(strcmp(argv[arg_idx], "proc") == 0) {
+            filter_type = TRACE_TYPE_PROC;
             arg_idx++;
-        } else if(filter_pid == -1) {
-            filter_pid = atoi(argv[arg_idx]);
+        } else if(strcmp(argv[arg_idx], "mem") == 0) {
+            filter_type = TRACE_TYPE_MEM;
+            arg_idx++;
+        } else if(strcmp(argv[arg_idx], "trap") == 0) {
+            filter_type = TRACE_TYPE_TRAP;
             arg_idx++;
         } else {
+            // Must be a number (limit or PID)
+            int val = atoi(argv[arg_idx]);
+            // check if it's actually a number (or "0")
+            if(val > 0 || strcmp(argv[arg_idx], "0") == 0) {
+                if(!limit_set) {
+                    limit = val;
+                    limit_set = 1;
+                } else if(filter_pid == -1) {
+                    filter_pid = val;
+                }
+            }
             arg_idx++;
         }
     }
 
+    // Flush console cursor to the bottom (row 24)
+    // This prevents the shell prompt from scrolling our dashboard up
+    for(i = 0; i < 25; i++) printf(1, "\n");
     vidclear();
     
     // initialize activity graph
@@ -414,7 +423,5 @@ main(int argc, char **argv){
         seen++;
     }
     
-    // Final clear-up to move cursor conceptually below the table
-    printf(1, "\n");
     exit();
 }

@@ -118,8 +118,8 @@ mkfs: mkfs.c fs.h
 
 UPROGS= \
 	_syscalltest _proctest _memtest _traptest \
-	_trap_test _cat _echo _forktest _grep _init _kill _ln _ls _mkdir \
-	_rm _sh _stressfs _trace_demo _trace _usertests _wc _zombie \
+	_cat _echo _forktest _grep _init _kill _ln _ls _mkdir \
+	_rm _sh _stressfs _trace _wc _zombie \
 #
 
 fs.img: mkfs README $(UPROGS)
@@ -187,10 +187,11 @@ qemu-nox-gdb: fs.img xv6.img .gdbinit
 
 EXTRA=\
 	mkfs.c ulib.c user.h cat.c echo.c forktest.c grep.c kill.c\
-	ln.c ls.c mkdir.c rm.c stressfs.c usertests.c wc.c zombie.c\
+	ln.c ls.c mkdir.c rm.c stressfs.c wc.c zombie.c\
 	printf.c umalloc.c\
 	README *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl
+
 
 dist:
 	rm -rf dist
