@@ -202,7 +202,8 @@ syscall(struct trapframe *tf)
     latency = end_ticks - start_ticks;
 
     //call trace event function 
-    if(num != SYS_traceread && num != SYS_vidclear && num != SYS_vidputc && num != SYS_vidputs)
+    if(num != SYS_traceread && num != SYS_vidclear && num != SYS_vidputc && num != SYS_vidputs &&
+       num != SYS_sleep && num != SYS_getpid && num != SYS_uptime)
       traceevent(TRACE_TYPE_SYSCALL, proc->pid, num, tf->rax, latency, syscallnames[num]);
 
     // DEBUG: Print the PID, system call number, and the return value from the syscall

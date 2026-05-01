@@ -193,7 +193,7 @@ void            clearpteu(pml4e_t *pgdir, char *uva);
 // ktrace.c
 void            traceinit(void);
 void            traceevent(int, int, int, int, int, char*);
-int             traceread(struct trace_event*);
+int             traceread(struct trace_event*, int);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))

@@ -95,8 +95,14 @@ trap(struct trapframe *tf)
             proc->pid, proc->name, tf->trapno, tf->err, cpunum(), tf->rip,
             rcr2());
             
-    // cprintf("debug: recording trap event\n");
-    traceevent(TRACE_TYPE_TRAP, proc->pid, tf->trapno, tf->err, 0, proc->name);
+    // Log the trap event
+    if(tf->trapno == T_PGFLT)
+        traceevent(TRACE_TYPE_TRAP, proc->pid, tf->trapno, tf->err, 0, "pagefault");
+    else if(tf->trapno == T_ILLOP)
+        traceevent(TRACE_TYPE_TRAP, proc->pid, tf->trapno, tf->err, 0, "illegalop");
+    else
+        traceevent(TRACE_TYPE_TRAP, proc->pid, tf->trapno, tf->err, 0, "usertrap");
+        
     proc->killed = 1;
   }
 

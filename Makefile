@@ -117,6 +117,7 @@ mkfs: mkfs.c fs.h
 .PRECIOUS: %.o
 
 UPROGS= \
+	_syscalltest _proctest _memtest _traptest \
 	_trap_test _cat _echo _forktest _grep _init _kill _ln _ls _mkdir \
 	_rm _sh _stressfs _trace_demo _trace _usertests _wc _zombie \
 #

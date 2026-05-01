@@ -5,7 +5,8 @@
 #include "syscall.h"
 
 
-#define MAX_EVENTS 16
+#define MAX_TRACE_ROWS 32
+#define DEFAULT_DISPLAY_ROWS 15
 #define COLOR_NORMAL 0x07
 #define COLOR_TITLE 0x0f
 #define COLOR_GREEN 0x0a
@@ -17,6 +18,10 @@
 
 int sys_count, proc_count, mem_count, trap_count = 0;
 int t_sys_count, t_proc_count, t_mem_count, t_trap_count = 0;
+int display_rows = DEFAULT_DISPLAY_ROWS;
+
+// Move large array to data segment to avoid stack overflow
+static struct trace_event recent[MAX_TRACE_ROWS];
 
 static char*
 typename(int type){
@@ -52,19 +57,11 @@ type_color(int type){
 
 static int
 detail_color(struct trace_event *event){
-    if(event->type == TRACE_TYPE_TRAP) {
-        return COLOR_RED;
-    }
-    if(event->type == TRACE_TYPE_MEM) {
-        return COLOR_YELLOW;
-    }
-    if(event->type == TRACE_TYPE_PROC) {
-        return COLOR_GREEN;
-    }
+    if(event->type == TRACE_TYPE_TRAP) return COLOR_RED;
+    if(event->type == TRACE_TYPE_MEM) return COLOR_YELLOW;
+    if(event->type == TRACE_TYPE_PROC) return COLOR_GREEN;
     if(event->type == TRACE_TYPE_SYSCALL) {
-        if(event->arg1 < 0) {
-            return COLOR_RED;
-        }
+        if(event->arg1 < 0) return COLOR_RED;
         return COLOR_CYAN;
     }
     return COLOR_NORMAL;
@@ -72,44 +69,35 @@ detail_color(struct trace_event *event){
 
 static int
 latency_color(int latency){
-    if(latency >= 5)
-        return COLOR_RED;
-    if(latency >= 2)
-        return COLOR_YELLOW;
+    if(latency >= 5) return COLOR_RED;
+    if(latency >= 2) return COLOR_YELLOW;
     return COLOR_GREEN;
 }
 
 static int
-want_event(struct trace_event *event, int type_filter, int pid_filter){
-    if(type_filter != 0 && event->type != type_filter)
-        return 0;
-    if(pid_filter != -1 && event->pid != pid_filter)
-        return 0;
+want_event(struct trace_event *event, int type_filter, int pid_filter, int self_pid){
+    // Exclude the dashboard's own events to avoid feedback loops
+    if(event->pid == self_pid) return 0;
+    
+    if(type_filter != 0 && event->type != type_filter) return 0;
+    if(pid_filter != -1 && event->pid != pid_filter) return 0;
     return 1;
 }
 
 static void
 update_window_counts(struct trace_event *event){
-    if(event->type == TRACE_TYPE_SYSCALL)
-        sys_count++;
-    else if(event->type == TRACE_TYPE_PROC)
-        proc_count++;
-    else if(event->type == TRACE_TYPE_MEM)
-        mem_count++;
-    else if(event->type == TRACE_TYPE_TRAP)
-        trap_count++;
+    if(event->type == TRACE_TYPE_SYSCALL) sys_count++;
+    else if(event->type == TRACE_TYPE_PROC) proc_count++;
+    else if(event->type == TRACE_TYPE_MEM) mem_count++;
+    else if(event->type == TRACE_TYPE_TRAP) trap_count++;
 }
 
 static void
 update_total_counts(struct trace_event *event){
-    if(event->type == TRACE_TYPE_SYSCALL)
-        t_sys_count++;
-    else if(event->type == TRACE_TYPE_PROC)
-        t_proc_count++;
-    else if(event->type == TRACE_TYPE_MEM)
-        t_mem_count++;
-    else if(event->type == TRACE_TYPE_TRAP)
-        t_trap_count++;
+    if(event->type == TRACE_TYPE_SYSCALL) t_sys_count++;
+    else if(event->type == TRACE_TYPE_PROC) t_proc_count++;
+    else if(event->type == TRACE_TYPE_MEM) t_mem_count++;
+    else if(event->type == TRACE_TYPE_TRAP) t_trap_count++;
 }
 
 
@@ -245,7 +233,7 @@ draw_graph(int row, int col, int *activity, int activity_pos){
 
 static void
 drawBoard(struct trace_event *recent, int recent_count, int recent_start,
-          int filter_type, int filter_pid, int overwritten)
+          int filter_type, int filter_pid, int overwritten, int seen, int limit)
 {
     int i, index;
 
@@ -253,44 +241,54 @@ drawBoard(struct trace_event *recent, int recent_count, int recent_start,
 
     vidputs(0, 0, "xv6 live kernel trace dashboard", COLOR_TITLE);
     
-    vidputs(1, 0, "filter: type=", COLOR_NORMAL);
-    vidputs(1, 13, typename(filter_type), type_color(filter_type));
-    vidputs(1, 21, " pid=", COLOR_NORMAL);
-    if(filter_pid == -1)
-        vidputs(1, 26, "all", COLOR_NORMAL);
-    else
-        drawnum(1, 26, filter_pid, COLOR_NORMAL);
+    vidputs(0, 37, "FILTER:", COLOR_NORMAL);
+    vidputs(0, 45, typename(filter_type), type_color(filter_type));
+    vidputs(0, 54, "pid=", COLOR_NORMAL);
+    if(filter_pid == -1) vidputs(0, 58, "all", COLOR_NORMAL);
+    else drawnum(0, 58, filter_pid, COLOR_NORMAL);
 
-    vidputs(1, 32, "| window: syscall=", COLOR_NORMAL);
-    drawnum(1, 50, sys_count, COLOR_CYAN);
-    vidputs(1, 54, " proc=", COLOR_NORMAL);
-    drawnum(1, 60, proc_count, COLOR_GREEN);
-    vidputs(1, 64, " mem=", COLOR_NORMAL);
-    drawnum(1, 69, mem_count, COLOR_YELLOW);
-    vidputs(1, 73, " trap=", COLOR_NORMAL);
-    drawnum(1, 79, trap_count, COLOR_RED);
+    vidputs(1, 0, "STATUS:", COLOR_NORMAL);
+    if(limit == 0){
+        vidputs(1, 8, "ONESHOT", COLOR_YELLOW);
+        vidputs(1, 17, "captured=", COLOR_NORMAL);
+        drawnum(1, 26, seen, COLOR_CYAN);
+        vidputs(1, 30, "/BUFFER", COLOR_NORMAL);
+    } else {
+        vidputs(1, 8, "LIVE", COLOR_GREEN);
+        vidputs(1, 17, "captured=", COLOR_NORMAL);
+        drawnum(1, 26, seen, COLOR_CYAN);
+        vidputs(1, 30, "/", COLOR_NORMAL);
+        drawnum(1, 31, limit, COLOR_CYAN);
+    }
+
+    vidputs(1, 47, "| showing: syscall=", COLOR_NORMAL);
+    drawnum(1, 66, sys_count, COLOR_CYAN);
+    vidputs(1, 71, "proc=", COLOR_NORMAL);
+    drawnum(1, 76, proc_count, COLOR_GREEN);
+    vidputs(2, 47, "|          mem=", COLOR_NORMAL);
+    drawnum(2, 62, mem_count, COLOR_YELLOW);
+    vidputs(2, 67, "trap=", COLOR_NORMAL);
+    drawnum(2, 72, trap_count, COLOR_RED);
 
     vidputs(2, 0, "total: syscall=", COLOR_NORMAL);
     drawnum(2, 15, t_sys_count, COLOR_CYAN);
-    vidputs(2, 20, " proc=", COLOR_NORMAL);
-    drawnum(2, 26, t_proc_count, COLOR_GREEN);
-    vidputs(2, 30, " mem=", COLOR_NORMAL);
-    drawnum(2, 35, t_mem_count, COLOR_YELLOW);
-    vidputs(2, 40, " trap=", COLOR_NORMAL);
-    drawnum(2, 46, t_trap_count, COLOR_RED);
-    vidputs(2, 52, "| overwritten=", COLOR_NORMAL);
-    drawnum(2, 66, overwritten, overwritten > 0 ? COLOR_RED : COLOR_NORMAL);
-
-    // draw_graph(4, 0, activity, activity_pos); // activity graph needs activity array
+    vidputs(2, 20, "proc=", COLOR_NORMAL);
+    drawnum(2, 25, t_proc_count, COLOR_GREEN);
+    vidputs(2, 30, "mem=", COLOR_NORMAL);
+    drawnum(2, 34, t_mem_count, COLOR_YELLOW);
+    vidputs(2, 39, "trap=", COLOR_NORMAL);
+    drawnum(2, 44, t_trap_count, COLOR_RED);
+    vidputs(2, 49, "| overwritten=", COLOR_NORMAL);
+    drawnum(2, 63, overwritten, overwritten > 0 ? COLOR_RED : COLOR_NORMAL);
 
     vidputs(6, 0, "SEQ   TICKS   PID   PROC     SUBSYS    EVENT     DETAILS", COLOR_TITLE);
     vidputs(7, 0, "---------------------------------------------------------------------------", COLOR_NORMAL);
    
-    for(i = 0; i < recent_count && i < MAX_EVENTS; i++){
-        index = (recent_start + i) % MAX_EVENTS;
+    // Limit loop by recent_count, display_rows, AND MAX_TRACE_ROWS
+    for(i = 0; i < recent_count && i < display_rows && i < MAX_TRACE_ROWS; i++){
+        index = (recent_start + i) % MAX_TRACE_ROWS;
         draweventrow(8 + i, &recent[index]);
     }
-
 }
 
 
@@ -298,10 +296,9 @@ drawBoard(struct trace_event *recent, int recent_count, int recent_start,
 int
 main(int argc, char **argv){
     struct trace_event event;
-    struct trace_event recent[MAX_EVENTS];
     int recent_count = 0;
     int recent_start = 0;
-    int limit = 1000;
+    int limit = 0; // Default: drain buffer and exit
     int seen = 0;
     int activity[GRAPH_WIDTH];
     int activity_pos = 0;
@@ -310,36 +307,41 @@ main(int argc, char **argv){
     int filter_type = 0;
     int filter_pid = -1;
     int overwritten = 0;
+    int arg_idx = 1;
+    int self_pid = getpid();
+
+    while(arg_idx < argc) {
+        if(strcmp(argv[arg_idx], "-n") == 0 && arg_idx + 1 < argc) {
+            display_rows = atoi(argv[arg_idx + 1]);
+            if(display_rows > MAX_TRACE_ROWS) display_rows = MAX_TRACE_ROWS;
+            arg_idx += 2;
+        } else if(atoi(argv[arg_idx]) > 0 || (strcmp(argv[arg_idx], "0") == 0 && seen == 0)) {
+            limit = atoi(argv[arg_idx]);
+            arg_idx++;
+        } else if(filter_type == 0 && filter_pid == -1) {
+            if(strcmp(argv[arg_idx], "syscall") == 0) filter_type = TRACE_TYPE_SYSCALL;
+            else if(strcmp(argv[arg_idx], "proc") == 0) filter_type = TRACE_TYPE_PROC;
+            else if(strcmp(argv[arg_idx], "mem") == 0) filter_type = TRACE_TYPE_MEM;
+            else if(strcmp(argv[arg_idx], "trap") == 0) filter_type = TRACE_TYPE_TRAP;
+            else if(atoi(argv[arg_idx]) > 0 || strcmp(argv[arg_idx], "0") == 0) filter_pid = atoi(argv[arg_idx]);
+            arg_idx++;
+        } else if(filter_pid == -1) {
+            filter_pid = atoi(argv[arg_idx]);
+            arg_idx++;
+        } else {
+            arg_idx++;
+        }
+    }
 
     vidclear();
     
-    sleep(10);
-
-    if(argc > 1)
-        limit = atoi(argv[1]);
-    if(argc > 2){
-        if(strcmp(argv[2], "syscall") == 0)
-            filter_type = TRACE_TYPE_SYSCALL;
-        else if(strcmp(argv[2], "proc") == 0)
-            filter_type = TRACE_TYPE_PROC;
-        else if(strcmp(argv[2], "mem") == 0)
-            filter_type = TRACE_TYPE_MEM;
-        else if(strcmp(argv[2], "trap") == 0)
-            filter_type = TRACE_TYPE_TRAP;
-        else if(atoi(argv[2]) > 0 || strcmp(argv[2], "0") == 0)
-            filter_pid = atoi(argv[2]);
-    }
-    if(argc > 3){
-        filter_pid = atoi(argv[3]);
-    }
-
     // initialize activity graph
     for(i = 0; i < GRAPH_WIDTH; i++){
         activity[i] = 0;
     }
 
-    while(seen < limit){
-        int n = traceread(&event);
+    while(limit == 0 || seen < limit){
+        int n = traceread(&event, 1);
 
         if(n < 0){
             printf(1, "traceread failed\n");
@@ -347,6 +349,28 @@ main(int argc, char **argv){
         }
 
         if(n == 0){
+            // If in drain mode (limit=0) and no unread events, we're done
+            if(limit == 0 && recent_count > 0) break;
+            if(limit == 0 && seen == 0) {
+                 // if buffer was empty from start, give it a tiny bit of time
+                 if(uptime() - last_tick > 10) break; 
+            }
+
+            // Idle loop for live mode: update current time and graph
+            int now = uptime();
+            if(last_tick == -1) last_tick = now;
+            
+            if(now > last_tick){
+                int diff = now - last_tick;
+                if(diff > 50) diff = 50;
+                for(i = 0; i < diff; i++){
+                    activity_pos = (activity_pos + 1) % GRAPH_WIDTH;
+                    activity[activity_pos] = 0;
+                }
+                last_tick = now;
+                drawBoard(recent, recent_count, recent_start, filter_type, filter_pid, overwritten, seen, limit);
+                draw_graph(4, 0, activity, activity_pos);
+            }
             sleep(10);
             continue;
         }
@@ -354,18 +378,19 @@ main(int argc, char **argv){
         update_total_counts(&event);
         overwritten = event.overwritten;
 
-        if(!want_event(&event, filter_type, filter_pid))
+        // Skip events from the dashboard itself or those that don't match the filter
+        if(!want_event(&event, filter_type, filter_pid, self_pid))
             continue;
         
         update_window_counts(&event);
 
-        // Update the activity graph
+        // Update the activity graph based on event time
         if(last_tick == -1)
             last_tick = event.ticks;
 
-        if(event.ticks != last_tick){
+        if(event.ticks > last_tick){
             int diff = event.ticks - last_tick;
-            if(diff > 50) diff = 50; // Cap it
+            if(diff > 50) diff = 50; 
             for(i = 0; i < diff; i++) {
                 activity_pos = (activity_pos + 1) % GRAPH_WIDTH;
                 activity[activity_pos] = 0;
@@ -375,18 +400,21 @@ main(int argc, char **argv){
         activity[activity_pos]++;
 
 
-        if(recent_count < MAX_EVENTS){
+        if(recent_count < MAX_TRACE_ROWS){
             recent[recent_count] = event;
             recent_count++;
         } else {
             recent[recent_start] = event;
-            recent_start = (recent_start + 1) % MAX_EVENTS;
+            recent_start = (recent_start + 1) % MAX_TRACE_ROWS;
         }
         
-        drawBoard(recent, recent_count, recent_start, filter_type, filter_pid, overwritten);
+        drawBoard(recent, recent_count, recent_start, filter_type, filter_pid, overwritten, seen, limit);
         draw_graph(4, 0, activity, activity_pos);
 
         seen++;
     }
+    
+    // Final clear-up to move cursor conceptually below the table
+    printf(1, "\n");
     exit();
 }

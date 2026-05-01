@@ -25,7 +25,7 @@ int getpid(void);
 char* sbrk(uint64);
 int sleep(int);
 int uptime(void);
-int traceread(void*);
+int traceread(void*, int);
 int vidclear(void);
 int vidputc(int, int, int, int);
 int vidputs(int, int, char*, int);

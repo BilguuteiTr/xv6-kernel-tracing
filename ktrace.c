@@ -77,24 +77,29 @@ traceevent(int type, int pid, int arg0, int arg1, int arg2, char *name){
 }
 
 int
-traceread(struct trace_event *dst){
-    struct trace_event event;
+traceread(struct trace_event *dst, int max_events){
+    int count = 0;
+
+    if(max_events <= 0)
+        return 0;
 
     acquire(&traceBuffer.lock);
 
-    // No unread events available, return 0
-    if(traceBuffer.readseq == traceBuffer.seq){
-        release(&traceBuffer.lock); // Release the lock
-        return 0;
+    while(count < max_events && traceBuffer.readseq != traceBuffer.seq){
+        struct trace_event event = traceBuffer.events[traceBuffer.readseq % TRACE_BUF_SIZE];
+        traceBuffer.readseq++;
+        
+        // Release lock while copying to avoid holding it too long if copyout is slow
+        // but wait, we need to be careful with readseq.
+        // Actually, for xv6, keeping the lock is simpler and usually okay.
+        
+        if(copyout(proc->pgdir, (addr_t)&dst[count], &event, sizeof(event)) < 0){
+            release(&traceBuffer.lock);
+            return count > 0 ? count : -1;
+        }
+        count++;
     }
 
-    event = traceBuffer.events[traceBuffer.readseq % TRACE_BUF_SIZE];
-    traceBuffer.readseq++; // Increment
-
     release(&traceBuffer.lock);
-
-    if(copyout(proc->pgdir, (addr_t)dst, &event, sizeof(event)) < 0)
-        return -1;
-
-    return 1;
+    return count;
 }

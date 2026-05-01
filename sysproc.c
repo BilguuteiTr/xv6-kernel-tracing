@@ -93,12 +93,20 @@ sys_uptime(void)
 int
 sys_traceread(void){
   struct trace_event *event;
+  int max_events;
 
-  // Get the first argument to grab the first event
-  if(argptr(0, (char**)&event, sizeof(*event)) < 0)
+  // Get the max_events count first
+  if(argint(1, &max_events) < 0)
     return -1;
 
-  return traceread(event);
+  if(max_events <= 0)
+    return 0;
+
+  // Get the destination buffer and check if it's large enough for max_events
+  if(argptr(0, (char**)&event, max_events * sizeof(struct trace_event)) < 0)
+    return -1;
+
+  return traceread(event, max_events);
 }
 
 
