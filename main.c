@@ -28,6 +28,9 @@ main(void)
   ioapicinit();    // another interrupt controller
   consoleinit();   // console hardware
   uartinit();      // serial port
+  
+  traceinit();     // trace buffer
+
   pinit();         // process table
   binit();         // buffer cache
   fileinit();      // file table

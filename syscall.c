@@ -6,6 +6,7 @@
 #include "proc.h"
 #include "x86.h"
 #include "syscall.h"
+#include "trace.h"
 
 // Fetch the int at addr from the current process.
 int
@@ -122,6 +123,10 @@ extern addr_t sys_unlink(void);
 extern addr_t sys_wait(void);
 extern addr_t sys_write(void);
 extern addr_t sys_uptime(void);
+extern addr_t sys_traceread(void);
+extern addr_t sys_vidclear(void);
+extern addr_t sys_vidputc(void);
+extern addr_t sys_vidputs(void);
 
 // PAGEBREAK!
 static addr_t (*syscalls[])(void) = {
@@ -146,6 +151,38 @@ static addr_t (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_traceread]  sys_traceread,
+[SYS_vidclear]  sys_vidclear,
+[SYS_vidputc]  sys_vidputc,
+[SYS_vidputs] sys_vidputs,
+};
+
+static char *syscallnames[] = {
+  [SYS_fork]  "fork",
+  [SYS_exit]  "exit",
+  [SYS_wait]  "wait",
+  [SYS_pipe]  "pipe",
+  [SYS_read]  "read",
+  [SYS_kill]  "kill",
+  [SYS_exec]  "exec",
+  [SYS_fstat] "fstat",
+  [SYS_chdir] "chdir",
+  [SYS_dup]   "dup",
+  [SYS_getpid] "getpid",
+  [SYS_sbrk]   "sbrk",
+  [SYS_sleep] "sleep",
+  [SYS_uptime]  "uptime",
+  [SYS_open]  "open",
+  [SYS_write] "write",
+  [SYS_mknod] "mknod",
+  [SYS_unlink]  "unlink",
+  [SYS_link]    "link",
+  [SYS_mkdir]   "mkdir",
+  [SYS_close]   "close",
+  [SYS_traceread] "traceread",
+  [SYS_vidclear]  "vidclear",
+  [SYS_vidputc] "vidputc",
+  [SYS_vidputs] "vidputs",
 };
 
 void
@@ -153,8 +190,24 @@ syscall(struct trapframe *tf)
 {
   proc->tf = tf;
   uint64 num = proc->tf->rax;
+  uint start_ticks, end_ticks, latency;
+
+  
+
+
   if (num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    start_ticks = ticks;
     tf->rax = syscalls[num]();
+    end_ticks = ticks;
+    latency = end_ticks - start_ticks;
+
+    //call trace event function 
+    if(num != SYS_traceread && num != SYS_vidclear && num != SYS_vidputc && num != SYS_vidputs &&
+       num != SYS_sleep && num != SYS_getpid && num != SYS_uptime)
+      traceevent(TRACE_TYPE_SYSCALL, proc->pid, num, tf->rax, latency, syscallnames[num]);
+
+    // DEBUG: Print the PID, system call number, and the return value from the syscall
+    // cprintf("trace: pid %d syscall %s(%d) -> %d\n", proc->pid, syscallnames[num], num, tf->rax);
   } else {
     cprintf("%d %s: unknown sys call %d\n",
             proc->pid, proc->name, num);

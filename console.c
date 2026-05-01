@@ -179,6 +179,30 @@ cgaputc(int c)
   crt[pos] = ' ' | 0x0700;
 }
 
+void 
+vidclear(void){
+  int i;
+  for(i = 0; i < 80 * 25; i++)
+    crt[i] = ' ' | 0x0700;
+}
+
+void
+vidputc(int row, int col, int ch, int color){
+  if(row < 0 || row >= 25)
+    return;
+  if(col < 0 || col >= 80)
+    return;
+
+  crt[row * 80 + col] = (ch & 0xff) | ((color & 0xff) << 8);
+}
+
+void 
+vidputs(int row, int col, char *s, int color){
+  int i;
+  for(i = 0; s[i] != 0 && col + i < 80; i++)
+    vidputc(row, col + i, s[i], color);
+}
+
   void
 consputc(int c)
 {

@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "trace.h"
 
 int
 sys_fork(void)
@@ -86,4 +87,64 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+
+int
+sys_traceread(void){
+  struct trace_event *event;
+  int max_events;
+
+  // Get the max_events count first
+  if(argint(1, &max_events) < 0)
+    return -1;
+
+  if(max_events <= 0)
+    return 0;
+
+  // Get the destination buffer and check if it's large enough for max_events
+  if(argptr(0, (char**)&event, max_events * sizeof(struct trace_event)) < 0)
+    return -1;
+
+  return traceread(event, max_events);
+}
+
+
+int sys_vidclear(void){
+  vidclear();
+  return 0;
+}
+
+int
+sys_vidputc(void){
+  int row, col, ch, color;
+
+  if(argint(0, &row) < 0)
+    return -1;
+  if(argint(1, &col) < 0)
+    return -1;
+  if(argint(2, &ch) < 0)
+    return -1;
+  if(argint(3, &color) < 0)
+    return -1;
+
+  vidputc(row, col, ch, color);
+  return 0;
+}
+
+int sys_vidputs(void){
+  int row, col, color;
+  char *s;
+
+  if(argint(0, &row) < 0)
+    return -1;
+  if(argint(1, &col) < 0)
+    return -1;
+  if(argstr(2, &s) < 0)
+    return -1;
+  if(argint(3, &color) < 0)
+    return -1;
+
+  vidputs(row, col, s, color);
+  return 0;
 }
